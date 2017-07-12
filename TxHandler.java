@@ -1,3 +1,5 @@
+import java.util.ArrayList;
+
 public class TxHandler {
 
     private UTXOPool _pool;
@@ -34,7 +36,19 @@ public class TxHandler {
      * updating the current UTXO pool as appropriate.
      */
     public Transaction[] handleTxs(Transaction[] possibleTxs) {
-        return possibleTxs;
+        ArrayList<Transaction> result = new ArrayList<>();
+        for (Transaction tx : possibleTxs) {
+            if (isValidTx(tx)) {
+                for (Transaction.Input input : tx.getInputs())
+                    _pool.removeUTXO(new UTXO(input.prevTxHash, input.outputIndex));
+                for (int i = 0; i < tx.numOutputs(); i++)
+                    _pool.addUTXO(new UTXO(tx.getHash(), i), tx.getOutput(i));
+
+                result.add(tx);
+            }
+        }
+
+        return result.toArray(new Transaction[0]);
     }
 
     private boolean allClaimedOutputsInPool(Transaction tx) {
@@ -55,7 +69,7 @@ public class TxHandler {
                     tx.getRawDataToSign(i),
                     input.signature
             );
-            if(!isValid)
+            if (!isValid)
                 return false;
         }
         return true;
